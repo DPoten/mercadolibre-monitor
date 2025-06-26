@@ -7,16 +7,14 @@ app = Flask(__name__)
 
 def clean_url(url):
     # Extract base MercadoLibre product URL without query or fragment
-    import re
     m = re.match(r"(https://articulo\.mercadolibre\.com\.ar/MLA-\d+[-\w]*)", url)
     if m:
         return m.group(1)
-    return url  # fallback, just use original if no match
+    return url.strip()  # fallback
 
 @app.route("/")
 def index():
-    urls = get_urls()
-    return render_template("index.html", urls=urls)
+    return render_template("index.html", urls=get_urls())
 
 @app.route("/add", methods=["POST"])
 def add():
