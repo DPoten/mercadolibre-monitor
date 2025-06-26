@@ -10,11 +10,12 @@ def clean_url(url):
     m = re.match(r"(https://articulo\.mercadolibre\.com\.ar/MLA-\d+[-\w]*)", url)
     if m:
         return m.group(1)
-    return url.strip()  # fallback
+    return url  # fallback, just use original if no match
 
 @app.route("/")
 def index():
-    return render_template("index.html", urls=get_urls())
+    urls = get_urls()
+    return render_template("index.html", urls=urls)
 
 @app.route("/add", methods=["POST"])
 def add():
