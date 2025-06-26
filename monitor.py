@@ -9,7 +9,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0",
     "Accept-Language": "en-US,en;q=0.9"
 }
-POLL_INTERVAL = 60  # for testing, you can increase this in production
+POLL_INTERVAL = 60  # Check every 60 seconds for now
 URL_FILE = "urls.json"
 
 threads = []
@@ -49,6 +49,7 @@ def send_discord_embed(title, description, url, image_url):
         "description": description,
         "image": {"url": image_url} if image_url else {}
     }
+    print("📤 Sending embed:", json.dumps(embed, indent=2))
     try:
         response = requests.post(DISCORD_WEBHOOK_URL, json={"embeds": [embed]})
         print(f"📨 Discord status: {response.status_code}")
@@ -64,7 +65,7 @@ def get_current_details(url):
 
         frac = soup.select_one("span.andes-money-amount__fraction")
         dec = soup.select_one("span.andes-money-amount__decimals")
-        price = float(frac.text.replace(".", "") + "." + (dec.text if dec else "00"))
+        price = float(frac.text.replace(".", "") + "." + (dec.text if dec else "00")) if frac else None
 
         pct_el = soup.select_one("span.andes-money-amount__discount")
         pct = float(pct_el.text.strip().split("%")[0]) if pct_el else 0
@@ -76,33 +77,29 @@ def get_current_details(url):
         img_url = img_meta["content"] if img_meta else None
 
         return pct, price, img_url, name
-    except:
+    except Exception as e:
+        print(f"❌ Error fetching {url}: {e}")
         return None, None, None, None
 
 def monitor_url(url):
     global running
     while running:
-        print(f"[{time.strftime('%H:%M:%S')}] Checking {url}")
         pct, price, img_url, name = get_current_details(url)
-        print(f" → Found: {name}, Discount: {pct}%, Price: {price}")
         if pct is not None and price is not None:
-            prev_pct = previous_status.get(url)
-            if prev_pct is None or prev_pct != pct:
-                print(" → Sending Discord notification...")
-                previous_status[url] = pct
-                discounted = price * (1 - pct / 100)
-                desc = (
-                    f"💰 **Original:** ${price:,.2f}\n"
-                    f"🏷️ **{pct:.0f}% off:** Now ${discounted:,.2f}\n"
-                    f"🛒 {name}\n{url}"
-                )
-                send_discord_embed(name, desc, url, img_url)
-        else:
-            print(" → Failed to fetch valid discount or price.")
+            previous_status[url] = pct  # Save regardless
+            discounted = price * (1 - pct / 100)
+            desc = (
+                f"💰 **Original:** ${price:,.2f}\n"
+                f"🏷️ **{pct:.0f}% off:** Now ${discounted:,.2f}\n"
+                f"🛒 {name}\n{url}"
+            )
+            send_discord_embed(name, desc, url, img_url)
         time.sleep(POLL_INTERVAL)
 
 def start_monitoring():
     urls = load_urls()
+    print("🔎 Starting monitor for these URLs:")
+    print(urls)
     for url in urls:
         t = threading.Thread(target=monitor_url, args=(url,), daemon=True)
         t.start()
@@ -111,13 +108,3 @@ def start_monitoring():
 def stop_monitoring():
     global running
     running = False
-
-if __name__ == "__main__":
-    print("▶️ Starting MercadoLibre monitor...")
-    start_monitoring()
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("🛑 Shutting down...")
-        stop_monitoring()
