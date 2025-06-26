@@ -9,7 +9,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0",
     "Accept-Language": "en-US,en;q=0.9"
 }
-POLL_INTERVAL = 3600
+POLL_INTERVAL = 60
 URL_FILE = "urls.json"
 
 threads = []
@@ -84,7 +84,8 @@ def monitor_url(url):
         pct, price, img_url, name = get_current_details(url)
         if pct is not None and price is not None:
             prev_pct = previous_status.get(url)
-            if prev_pct != pct:
+            # Send notification if first time (prev_pct is None) or discount changed
+            if prev_pct is None or prev_pct != pct:
                 previous_status[url] = pct
                 discounted = price * (1 - pct / 100)
                 desc = (
