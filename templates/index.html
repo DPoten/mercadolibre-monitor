@@ -1,28 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>MercadoLibre Monitor</title>
-  <style>
-    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
-    input, button { padding: 8px; font-size: 14px; }
-    ul { list-style: none; padding: 0; }
-    li { margin: 5px 0; }
-  </style>
+    <meta charset="UTF-8" />
+    <title>MercadoLibre Discount Monitor</title>
 </head>
 <body>
-  <h1>MercadoLibre Discount Monitor</h1>
-  <form action="/add" method="POST">
-    <input type="text" name="url" placeholder="Paste MercadoLibre URL" required>
-    <button type="submit">Add URL</button>
-  </form>
-  <h2>Currently Tracked URLs:</h2>
-  <ul>
+    <h1>MercadoLibre Discount Monitor</h1>
+    <form action="/add" method="post">
+        <input type="text" name="url" placeholder="Paste MercadoLibre URL" required />
+        <button type="submit">Add URL</button>
+    </form>
+
+    <h2>Currently Tracked URLs:</h2>
+    <ul>
     {% for url in urls %}
-      <li>{{ url }} <a href="/remove/{{ loop.index0 }}">❌ Remove</a></li>
+        <li>
+            <a href="{{ url }}" target="_blank">{{ url }}</a>
+            <a href="{{ url_for('remove', index=loop.index0) }}">❌ Remove</a>
+        </li>
     {% else %}
-      <li>No URLs being tracked yet.</li>
+        <li>No URLs tracked yet.</li>
     {% endfor %}
-  </ul>
+    </ul>
 </body>
 </html>
