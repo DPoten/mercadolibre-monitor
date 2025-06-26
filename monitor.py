@@ -9,7 +9,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0",
     "Accept-Language": "en-US,en;q=0.9"
 }
-POLL_INTERVAL = 60
+POLL_INTERVAL = 60  # for testing, you can increase this in production
 URL_FILE = "urls.json"
 
 threads = []
@@ -50,9 +50,10 @@ def send_discord_embed(title, description, url, image_url):
         "image": {"url": image_url} if image_url else {}
     }
     try:
-        requests.post(DISCORD_WEBHOOK_URL, json={"embeds": [embed]})
-    except:
-        pass
+        response = requests.post(DISCORD_WEBHOOK_URL, json={"embeds": [embed]})
+        print(f"📨 Discord status: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Discord error: {e}")
 
 def get_current_details(url):
     try:
@@ -81,11 +82,13 @@ def get_current_details(url):
 def monitor_url(url):
     global running
     while running:
+        print(f"[{time.strftime('%H:%M:%S')}] Checking {url}")
         pct, price, img_url, name = get_current_details(url)
+        print(f" → Found: {name}, Discount: {pct}%, Price: {price}")
         if pct is not None and price is not None:
             prev_pct = previous_status.get(url)
-            # Send notification if first time (prev_pct is None) or discount changed
             if prev_pct is None or prev_pct != pct:
+                print(" → Sending Discord notification...")
                 previous_status[url] = pct
                 discounted = price * (1 - pct / 100)
                 desc = (
@@ -94,6 +97,8 @@ def monitor_url(url):
                     f"🛒 {name}\n{url}"
                 )
                 send_discord_embed(name, desc, url, img_url)
+        else:
+            print(" → Failed to fetch valid discount or price.")
         time.sleep(POLL_INTERVAL)
 
 def start_monitoring():
@@ -106,3 +111,13 @@ def start_monitoring():
 def stop_monitoring():
     global running
     running = False
+
+if __name__ == "__main__":
+    print("▶️ Starting MercadoLibre monitor...")
+    start_monitoring()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("🛑 Shutting down...")
+        stop_monitoring()
