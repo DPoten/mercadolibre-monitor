@@ -9,7 +9,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0",
     "Accept-Language": "en-US,en;q=0.9"
 }
-POLL_INTERVAL = 60  # 1 minute for testing, increase later
+POLL_INTERVAL = 60  # seconds
 URL_FILE = "urls.json"
 
 threads = []
@@ -19,34 +19,25 @@ previous_status = {}
 def load_urls():
     try:
         with open(URL_FILE, "r") as f:
-            urls = json.load(f)
-            print(f"[monitor] Loaded URLs: {urls}")
-            return urls
-    except Exception as e:
-        print(f"[monitor] Failed to load URLs: {e}")
+            return json.load(f)  # Must be a list of strings
+    except:
         return []
 
 def save_urls(urls):
-    try:
-        with open(URL_FILE, "w") as f:
-            json.dump(urls, f, indent=2)
-        print(f"[monitor] Saved URLs: {urls}")
-    except Exception as e:
-        print(f"[monitor] Failed to save URLs: {e}")
+    with open(URL_FILE, "w") as f:
+        json.dump(urls, f, indent=2)
 
 def add_url(url):
     urls = load_urls()
     if url not in urls:
         urls.append(url)
-        save_urls(url)
-        print(f"[monitor] Added URL: {url}")
+        save_urls(urls)
 
 def remove_url(index):
     urls = load_urls()
     if 0 <= index < len(urls):
-        removed = urls.pop(index)
+        urls.pop(index)
         save_urls(urls)
-        print(f"[monitor] Removed URL: {removed}")
 
 def get_urls():
     return load_urls()
@@ -59,26 +50,21 @@ def send_discord_embed(title, description, url, image_url):
         "image": {"url": image_url} if image_url else {}
     }
     try:
-        resp = requests.post(DISCORD_WEBHOOK_URL, json={"embeds": [embed]}, timeout=10)
-        print(f"[monitor] Discord webhook POST status: {resp.status_code}")
+        resp = requests.post(DISCORD_WEBHOOK_URL, json={"embeds": [embed]})
+        print(f"Discord notification sent, status code: {resp.status_code}")
     except Exception as e:
-        print(f"[monitor] Failed to send Discord embed: {e}")
+        print(f"Error sending Discord notification: {e}")
 
 def get_current_details(url):
     try:
         resp = requests.get(url, headers=HEADERS, timeout=10)
         if not resp.ok:
-            print(f"[monitor] HTTP error for {url}: {resp.status_code}")
             return None, None, None, None
         soup = BeautifulSoup(resp.content, "html.parser")
 
         frac = soup.select_one("span.andes-money-amount__fraction")
         dec = soup.select_one("span.andes-money-amount__decimals")
-        if frac:
-            price = float(frac.text.replace(".", "") + "." + (dec.text if dec else "00"))
-        else:
-            print(f"[monitor] Price not found for {url}")
-            return None, None, None, None
+        price = float(frac.text.replace(".", "") + "." + (dec.text if dec else "00"))
 
         pct_el = soup.select_one("span.andes-money-amount__discount")
         pct = float(pct_el.text.strip().split("%")[0]) if pct_el else 0
@@ -91,15 +77,13 @@ def get_current_details(url):
 
         return pct, price, img_url, name
     except Exception as e:
-        print(f"[monitor] Exception fetching details from {url}: {e}")
+        print(f"Error fetching details from {url}: {e}")
         return None, None, None, None
 
 def monitor_url(url):
     global running
-    print(f"[monitor] Starting monitor for: {url}")
     while running:
         pct, price, img_url, name = get_current_details(url)
-        print(f"[monitor] Checked {url}: discount={pct}, price={price}")
         if pct is not None and price is not None:
             prev_pct = previous_status.get(url)
             if prev_pct is None or prev_pct != pct:
@@ -110,25 +94,19 @@ def monitor_url(url):
                     f"🏷️ **{pct:.0f}% off:** Now ${discounted:,.2f}\n"
                     f"🛒 {name}\n{url}"
                 )
-                print(f"[monitor] Sending notification for {url}")
                 send_discord_embed(name, desc, url, img_url)
-        else:
-            print(f"[monitor] Invalid data for {url}, skipping notification.")
         time.sleep(POLL_INTERVAL)
 
 def start_monitoring():
     urls = load_urls()
     if not urls:
-        print("[monitor] No URLs to monitor.")
+        print("No URLs to monitor.")
     else:
-        print(f"[monitor] Monitoring {len(urls)} URLs.")
-
-    # Send startup notification
-    try:
-        requests.post(DISCORD_WEBHOOK_URL, json={"content": "🚀 Monitoring service started."})
-        print("[monitor] Sent startup notification.")
-    except Exception as e:
-        print(f"[monitor] Failed to send startup notification: {e}")
+        print(f"Monitoring {len(urls)} URLs.")
+        try:
+            requests.post(DISCORD_WEBHOOK_URL, json={"content": "🚀 Monitoring service started."})
+        except Exception as e:
+            print(f"Failed to send startup notification: {e}")
 
     for url in urls:
         t = threading.Thread(target=monitor_url, args=(url,), daemon=True)
@@ -138,4 +116,3 @@ def start_monitoring():
 def stop_monitoring():
     global running
     running = False
-    print("[monitor] Stopping monitoring threads...")
