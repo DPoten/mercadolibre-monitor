@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 import threading
 import re
+import os
 from monitor import start_monitoring, stop_monitoring, add_url, remove_url, get_urls
 
 app = Flask(__name__)
@@ -10,7 +11,7 @@ def clean_url(url):
     m = re.match(r"(https://articulo\.mercadolibre\.com\.ar/MLA-\d+[-\w]*)", url)
     if m:
         return m.group(1)
-    return url  # fallback
+    return url  # fallback if no match
 
 @app.route("/")
 def index():
@@ -30,7 +31,9 @@ def remove(index):
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
-    start_monitoring()
+    # Prevent running threads twice due to Flask reloader
+    if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        start_monitoring()
     try:
         app.run(debug=True, host="0.0.0.0", port=5000)
     finally:
