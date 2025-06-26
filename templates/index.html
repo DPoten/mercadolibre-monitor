@@ -6,21 +6,20 @@
 </head>
 <body>
     <h1>MercadoLibre Discount Monitor</h1>
-    <form action="/add" method="post">
-        <input type="text" name="url" placeholder="Paste MercadoLibre URL" required />
+    <form method="POST" action="{{ url_for('add') }}">
+        <input type="text" name="url" placeholder="Paste MercadoLibre URL" size="60" required />
         <button type="submit">Add URL</button>
     </form>
-
     <h2>Currently Tracked URLs:</h2>
     <ul>
-    {% for url in urls %}
+        {% for url in urls %}
         <li>
             <a href="{{ url }}" target="_blank">{{ url }}</a>
-            <a href="{{ url_for('remove', index=loop.index0) }}">❌ Remove</a>
+            <a href="{{ url_for('remove', index=loop.index0) }}" style="color:red; margin-left:10px;">❌ Remove</a>
         </li>
-    {% else %}
+        {% else %}
         <li>No URLs tracked yet.</li>
-    {% endfor %}
+        {% endfor %}
     </ul>
 </body>
 </html>
