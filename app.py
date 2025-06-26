@@ -2,9 +2,17 @@ from flask import Flask, render_template, request, redirect, url_for
 import threading
 import json
 import time
+import re
 from monitor import start_monitoring, stop_monitoring, add_url, remove_url, get_urls
 
 app = Flask(__name__)
+
+def clean_url(url):
+    # Extract base MercadoLibre product URL without query or fragment
+    m = re.match(r"(https://articulo\.mercadolibre\.com\.ar/MLA-\d+[-\w]*)", url)
+    if m:
+        return m.group(1)
+    return url  # fallback, just use original if no match
 
 @app.route("/")
 def index():
@@ -12,8 +20,9 @@ def index():
 
 @app.route("/add", methods=["POST"])
 def add():
-    url = request.form.get("url")
-    if url:
+    raw_url = request.form.get("url")
+    if raw_url:
+        url = clean_url(raw_url)
         add_url(url)
     return redirect(url_for("index"))
 
