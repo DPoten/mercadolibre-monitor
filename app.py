@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
+import threading
 import re
 from monitor import start_monitoring, stop_monitoring, add_url, remove_url, get_urls
 
@@ -6,6 +7,7 @@ app = Flask(__name__)
 
 def clean_url(url):
     # Extract base MercadoLibre product URL without query or fragment
+    import re
     m = re.match(r"(https://articulo\.mercadolibre\.com\.ar/MLA-\d+[-\w]*)", url)
     if m:
         return m.group(1)
@@ -14,7 +16,6 @@ def clean_url(url):
 @app.route("/")
 def index():
     urls = get_urls()
-    print(f"[app] URLs for template: {urls}")  # Debug line
     return render_template("index.html", urls=urls)
 
 @app.route("/add", methods=["POST"])
