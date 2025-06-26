@@ -27,6 +27,21 @@ def save_urls(urls):
     with open(URL_FILE, "w") as f:
         json.dump(urls, f, indent=2)
 
+def add_url(url):
+    urls = load_urls()
+    if url not in urls:
+        urls.append(url)
+        save_urls(urls)
+
+def remove_url(index):
+    urls = load_urls()
+    if 0 <= index < len(urls):
+        urls.pop(index)
+        save_urls(urls)
+
+def get_urls():
+    return load_urls()
+
 def send_discord_embed(title, description, url, image_url):
     embed = {
         "title": title,
@@ -107,10 +122,10 @@ def start_monitoring():
             time.sleep(1)
     except KeyboardInterrupt:
         print("[Monitor] Stopping monitoring...")
-        global running
-        running = False
+        stop_monitoring()
         for t in threads:
             t.join()
 
-if __name__ == "__main__":
-    start_monitoring()
+def stop_monitoring():
+    global running
+    running = False
