@@ -10,7 +10,7 @@ def clean_url(url):
     m = re.match(r"(https://articulo\.mercadolibre\.com\.ar/MLA-\d+[-\w]*)", url)
     if m:
         return m.group(1)
-    return url  # fallback, just use original if no match
+    return url  # fallback
 
 @app.route("/")
 def index():
@@ -30,10 +30,8 @@ def remove(index):
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
-    monitor_thread = threading.Thread(target=start_monitoring, daemon=True)
-    monitor_thread.start()
+    start_monitoring()
     try:
         app.run(debug=True, host="0.0.0.0", port=5000)
     finally:
         stop_monitoring()
-        monitor_thread.join()
