@@ -1,7 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
 import threading
-import json
-import time
 import re
 from monitor import start_monitoring, stop_monitoring, add_url, remove_url, get_urls
 
@@ -32,8 +30,10 @@ def remove(index):
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
-    start_monitoring()
+    monitor_thread = threading.Thread(target=start_monitoring, daemon=True)
+    monitor_thread.start()
     try:
         app.run(debug=True, host="0.0.0.0", port=5000)
     finally:
         stop_monitoring()
+        monitor_thread.join()
