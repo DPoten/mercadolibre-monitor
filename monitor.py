@@ -9,7 +9,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0",
     "Accept-Language": "en-US,en;q=0.9"
 }
-POLL_INTERVAL = 60  # seconds, reduce for faster testing
+POLL_INTERVAL = 60  # seconds
 URL_FILE = "urls.json"
 
 threads = []
@@ -20,16 +20,12 @@ def load_urls():
     try:
         with open(URL_FILE, "r") as f:
             return json.load(f)
-    except Exception as e:
-        print(f"Failed to load URLs: {e}")
+    except:
         return []
 
 def save_urls(urls):
-    try:
-        with open(URL_FILE, "w") as f:
-            json.dump(urls, f, indent=2)
-    except Exception as e:
-        print(f"Failed to save URLs: {e}")
+    with open(URL_FILE, "w") as f:
+        json.dump(urls, f, indent=2)
 
 def add_url(url):
     urls = load_urls()
@@ -55,7 +51,7 @@ def send_discord_embed(title, description, url, image_url):
     }
     try:
         resp = requests.post(DISCORD_WEBHOOK_URL, json={"embeds": [embed]})
-        print(f"Discord POST status: {resp.status_code}")
+        print(f"Discord embed sent: status {resp.status_code}")
     except Exception as e:
         print(f"Failed to send Discord embed: {e}")
 
@@ -63,12 +59,15 @@ def get_current_details(url):
     try:
         resp = requests.get(url, headers=HEADERS, timeout=10)
         if not resp.ok:
-            print(f"Failed to fetch {url}: Status {resp.status_code}")
+            print(f"Failed to fetch URL {url}: HTTP {resp.status_code}")
             return None, None, None, None
         soup = BeautifulSoup(resp.content, "html.parser")
 
         frac = soup.select_one("span.andes-money-amount__fraction")
         dec = soup.select_one("span.andes-money-amount__decimals")
+        if not frac:
+            print(f"Price fraction not found for {url}")
+            return None, None, None, None
         price = float(frac.text.replace(".", "") + "." + (dec.text if dec else "00"))
 
         pct_el = soup.select_one("span.andes-money-amount__discount")
@@ -82,7 +81,7 @@ def get_current_details(url):
 
         return pct, price, img_url, name
     except Exception as e:
-        print(f"Error parsing {url}: {e}")
+        print(f"Error scraping {url}: {e}")
         return None, None, None, None
 
 def monitor_url(url):
@@ -91,6 +90,7 @@ def monitor_url(url):
     while running:
         pct, price, img_url, name = get_current_details(url)
         if pct is not None and price is not None:
+            print(f"[{url}] Current discount: {pct}%, price: {price}")
             prev_pct = previous_status.get(url)
             if prev_pct is None or prev_pct != pct:
                 previous_status[url] = pct
@@ -113,10 +113,18 @@ def start_monitoring():
     urls = load_urls()
     if not urls:
         print("No URLs to monitor.")
-    else:
-        print(f"Monitoring {len(urls)} URLs.")
+        return
 
-    # Send test notification on start
+    print(f"Monitoring {len(urls)} URLs.")
+
+    # Force notification on first check by setting None for previous_status
+    for url in urls:
+        pct, price, img_url, name = get_current_details(url)
+        if pct is not None:
+            previous_status[url] = None  # Force notification on first run
+        else:
+            print(f"Warning: could not get initial discount for {url}")
+
     try:
         resp = requests.post(DISCORD_WEBHOOK_URL, json={"content": "🚀 Monitoring service started."})
         print(f"Startup Discord notification status: {resp.status_code}")
