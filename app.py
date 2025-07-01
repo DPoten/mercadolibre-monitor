@@ -1,19 +1,22 @@
 from flask import Flask, render_template, request, redirect, url_for
+import threading
 import re
 from monitor import start_monitoring, add_url, remove_url, get_urls
 
 app = Flask(__name__)
 
 def clean_url(url):
+    # Extract base MercadoLibre product URL without query or fragment
+    import re
     m = re.match(r"(https://articulo\.mercadolibre\.com\.ar/MLA-\d+[-\w]*)", url)
     if m:
         return m.group(1)
-    return url
+    return url  # fallback if no match
 
 @app.route("/")
 def index():
     urls = get_urls()
-    return render_template("index.html", urls=urls, enumerate=enumerate)
+    return render_template("index.html", urls=urls)
 
 @app.route("/add", methods=["POST"])
 def add():
@@ -29,5 +32,7 @@ def remove(index):
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
+    # Start monitor threads when app starts
     start_monitoring()
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # Run Flask server
+    app.run(host="0.0.0.0", port=5000)
