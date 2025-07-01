@@ -9,10 +9,8 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0",
     "Accept-Language": "en-US,en;q=0.9"
 }
-POLL_INTERVAL = 600  # 10 minutes
+POLL_INTERVAL = 3600  # 1 hour
 URL_FILE = "urls.json"
-
-threads = []
 previous_status = {}
 
 def load_urls():
@@ -21,38 +19,6 @@ def load_urls():
             return json.load(f)
     except:
         return []
-
-def save_urls(urls):
-    with open(URL_FILE, "w") as f:
-        json.dump(urls, f, indent=2)
-
-def add_url(url):
-    urls = load_urls()
-    if url not in urls:
-        urls.append(url)
-        save_urls(urls)
-
-def remove_url(index):
-    urls = load_urls()
-    if 0 <= index < len(urls):
-        urls.pop(index)
-        save_urls(urls)
-
-def get_urls():
-    return load_urls()
-
-def send_discord_embed(title, description, url, image_url):
-    embed = {
-        "title": title,
-        "url": url,
-        "description": description,
-        "image": {"url": image_url} if image_url else {}
-    }
-    try:
-        response = requests.post(DISCORD_WEBHOOK_URL, json={"embeds": [embed]})
-        print("🔔 Notification sent:", response.status_code)
-    except Exception as e:
-        print("❌ Error sending to Discord:", e)
 
 def get_current_details(url):
     try:
@@ -78,25 +44,37 @@ def get_current_details(url):
     except:
         return None, None, None, None
 
-def monitor_url(url):
+def send_discord_embed(title, description, url, image_url):
+    embed = {
+        "title": title,
+        "url": url,
+        "description": description,
+        "image": {"url": image_url} if image_url else {}
+    }
+    try:
+        r = requests.post(DISCORD_WEBHOOK_URL, json={"embeds": [embed]})
+        print(f"[{title}] Discord status code: {r.status_code}")
+    except Exception as e:
+        print(f"Failed to send embed: {e}")
+
+def monitor_loop():
+    print("✅ Monitor started.")
     while True:
-        pct, price, img_url, name = get_current_details(url)
-        if pct is not None and price is not None:
-            prev_pct = previous_status.get(url)
-            if prev_pct is None or prev_pct != pct:
-                previous_status[url] = pct
-                discounted = price * (1 - pct / 100)
-                desc = (
-                    f"💰 **Original:** ${price:,.2f}\n"
-                    f"🏷️ **{pct:.0f}% off:** Now ${discounted:,.2f}\n"
-                    f"🛒 {name}"
-                )
-                send_discord_embed(name, desc, url, img_url)
+        urls = load_urls()
+        for url in urls:
+            pct, price, img_url, name = get_current_details(url)
+            if pct is not None and price is not None:
+                prev_pct = previous_status.get(url)
+                if prev_pct is None or prev_pct != pct:
+                    previous_status[url] = pct
+                    discounted = price * (1 - pct / 100)
+                    desc = (
+                        f"💰 **Original:** ${price:,.2f}\n"
+                        f"🏷️ **{pct:.0f}% off:** Now ${discounted:,.2f}\n"
+                        f"🛒 {name}\n{url}"
+                    )
+                    send_discord_embed(name, desc, url, img_url)
         time.sleep(POLL_INTERVAL)
 
-def start_monitoring():
-    urls = load_urls()
-    for url in urls:
-        t = threading.Thread(target=monitor_url, args=(url,), daemon=True)
-        t.start()
-        threads.append(t)
+if __name__ == "__main__":
+    monitor_loop()
