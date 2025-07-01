@@ -1,33 +1,68 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MercadoLibre Discount Monitor</title>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 600px; margin: 30px auto; }
-  input[type=text] { width: 80%; padding: 8px; }
-  button { padding: 8px 12px; }
-  ul { padding-left: 0; }
-  li { list-style: none; margin: 6px 0; }
-  a.remove-btn { margin-left: 10px; color: red; text-decoration: none; }
-</style>
+    <title>MercadoLibre Discount Monitor</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #f4f4f4;
+            padding: 20px;
+        }
+        h1 { color: #333; }
+        form {
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            font-size: 1rem;
+        }
+        button {
+            padding: 10px;
+            font-size: 1rem;
+            background: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        ul {
+            padding-left: 0;
+        }
+        li {
+            list-style: none;
+            margin-bottom: 10px;
+            background: #fff;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .remove {
+            float: right;
+            background: red;
+            color: white;
+            padding: 4px 8px;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-<h1>MercadoLibre Discount Monitor</h1>
-<form method="POST" action="{{ url_for('add') }}">
-  <input type="text" name="url" placeholder="Paste MercadoLibre URL" required />
-  <button type="submit">Add URL</button>
-</form>
-<h2>Currently Tracked URLs:</h2>
-<ul>
-  {% if urls %}
-    {% for i, url in enumerate(urls) %}
-      <li>{{ url }} <a class="remove-btn" href="{{ url_for('remove', index=i) }}">❌ Remove</a></li>
-    {% endfor %}
-  {% else %}
-    <li>No URLs tracked yet.</li>
-  {% endif %}
-</ul>
+    <h1>MercadoLibre Discount Monitor</h1>
+    <form method="POST" action="{{ url_for('add') }}">
+        <input type="text" name="url" placeholder="Paste MercadoLibre URL" required>
+        <button type="submit">Add URL</button>
+    </form>
+    <h2>Currently Tracked URLs:</h2>
+    <ul>
+        {% for i, url in enumerate(urls) %}
+        <li>
+            {{ url }}
+            <a href="{{ url_for('remove', index=i) }}">
+                <button class="remove">❌ Remove</button>
+            </a>
+        </li>
+        {% else %}
+        <li>No URLs being monitored.</li>
+        {% endfor %}
+    </ul>
 </body>
 </html>
