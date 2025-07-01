@@ -1,17 +1,18 @@
 from flask import Flask, render_template, request, redirect, url_for
-import threading
 import re
-from monitor import start_monitoring, add_url, remove_url, get_urls
+from monitor import add_url, remove_url, get_urls, start_monitoring, stop_monitoring
 
 app = Flask(__name__)
 
+# Make enumerate available inside Jinja2 templates
+app.jinja_env.globals.update(enumerate=enumerate)
+
 def clean_url(url):
     # Extract base MercadoLibre product URL without query or fragment
-    import re
     m = re.match(r"(https://articulo\.mercadolibre\.com\.ar/MLA-\d+[-\w]*)", url)
     if m:
         return m.group(1)
-    return url  # fallback if no match
+    return url  # fallback, just use original if no match
 
 @app.route("/")
 def index():
@@ -32,7 +33,8 @@ def remove(index):
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
-    # Start monitor threads when app starts
     start_monitoring()
-    # Run Flask server
-    app.run(host="0.0.0.0", port=5000)
+    try:
+        app.run(debug=True, host="0.0.0.0", port=5000)
+    finally:
+        stop_monitoring()
